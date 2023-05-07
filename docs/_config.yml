@@ -33,6 +33,8 @@ github_username:  jekyll
 theme: bulma-clean-theme
 plugins:
   - jekyll-feed
+permalink: pretty
+fixed_navbar: top
 
 # Exclude from processing.
 # The following items will not be processed, by default.
