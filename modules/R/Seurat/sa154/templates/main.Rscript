@@ -1,0 +1,71 @@
+#! /bin/env Rscript
+
+# *************************************************************************************************
+# a quick script to preprocess rna-seq
+# *************************************************************************************************
+
+# -------------------------------------------------------------------------------------------------
+# attach and record packages used in this Rscript
+# -------------------------------------------------------------------------------------------------
+
+library(future)
+library(magrittr)
+library(purrr)
+library(readr)
+library(scampr)
+library(Seurat)
+library(yaml)
+
+record_package_versions(root_name="${task.process}")
+
+log_message('preprocessing scrna-seq to clustering stage', level='main')
+
+# -------------------------------------------------------------------------------------------------
+# collect nextflow properties for the task
+# -------------------------------------------------------------------------------------------------
+
+list(nthreads = Sys.getenv('SLURM_CPUS_PER_TASK', unset=4) |> as.numeric()) %>%
+	assign_and_record_nextflow_properties(root_name="${task.process}", work_dir=getwd())
+
+plan(multisession, workers=nthreads)
+options(future.globals.maxSize=32*1024^3) # change `future` max object size
+
+# -------------------------------------------------------------------------------------------------
+# load the seurat and cell id files
+# -------------------------------------------------------------------------------------------------
+
+log_message('reading input (rds) files', level='section')
+
+cell_ids <- read_tsv(file='cell_ids.tsv', show_col_types=FALSE) |> pluck(1)
+cell_cycle_genes <- read_yaml(file='cell_cycle_genes.yaml') |> lapply(pluck, 'features')
+seurat <- readRDS(file='input_seurat.rds') |> subset(cells=cell_ids)
+
+#
+#
+#
+
+ndims <- 15
+
+seurat %<>%
+	NormalizeData() %>%
+	CellCycleScoring(s.features={cell_cycle_genes |> pluck('S')}, g2m.features={cell_cycle_genes |> pluck('G2M')}, seed=1) %>%
+	AddMetaData(col.name='CC.Difference', metadata=subtract(.\$S.Score, .\$G2M.Score)) %>%
+	FindVariableFeatures() %>%
+	ScaleData() %>%
+	RunPCA(npcs=50) %>%
+	RunTSNE(dims=seq(ndims), dim.embed=2, reduction='pca', reduction.name='tsne', reduction.key='tSNE2D_', seed.use=1) %>%
+	RunTSNE(dims=seq(ndims), dim.embed=3, reduction='pca', reduction.name='tsne_3d', reduction.key='tSNE3D_', seed.use=1) %>%
+	RunUMAP(dims=seq(ndims), n.components=2, reduction='pca', reduction.name='umap', reduction.key='UMAP_', seed.use=1) %>%
+	RunUMAP(dims=seq(ndims), n.components=3, reduction='pca', reduction.name='umap_3d', reduction.key='UMAP3D_', seed.use=1) %>%
+	FindNeighbors(dims=seq(ndims), reduction='pca') %>%
+	FindClusters(resolution=seq(from=0.2, to=2.0, by=0.2), random.seed=1)
+
+Idents(seurat) <- 'RNA_snn_res.0.2'
+
+# -------------------------------------------------------------------------------------------------
+# write any output files that haven't already
+# -------------------------------------------------------------------------------------------------
+
+log_message('writing output files', level='section')
+
+saveRDS(object=seurat, file='seurat.rds')
