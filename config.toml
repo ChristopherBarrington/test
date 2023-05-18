@@ -130,19 +130,19 @@ disableHugoGeneratorInject = true
 # settings specific to this theme's features; choose to your liking and
 # consult this documentation for explanation
 [params]
-  editURL = "https://github.com/ChristopherBarrington/scamp/edit/main/docs/content"
-  description = "Documentation for scamp"
+  additionalContentLanguage = [ "en" ]
+  alwaysopen = false
   author = "Christopher Barrington"
-  showVisitedLinks = false
   collapsibleMenu = true
+  description = "Documentation for scamp"
   disableBreadcrumb = false
   disableInlineCopyToClipBoard = true
-  disableNextPrev = true
   disableLandingPageButton = false
-  titleSeparator = "::"
+  disableNextPrev = true
+  disableSeoHiddenPages = true
+  disableToc = false
+  editURL = "https://github.com/ChristopherBarrington/scamp/edit/main/docs/content"
+  showVisitedLinks = false
   themeVariant = [ "auto", "relearn-bright", "relearn-light", "relearn-dark", "learn", "neon" ]
   themeVariantAuto = [ "relearn-light", "relearn-dark" ]
-  disableSeoHiddenPages = true
-
-  # this is to index search for your native language in other languages
-  additionalContentLanguage = [ "en" ]
+  titleSeparator = "|"
